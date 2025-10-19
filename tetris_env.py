@@ -17,8 +17,7 @@ class TetrisEnv:
         0 = move left
         1 = move right
         2 = rotate clockwise
-        3 = soft drop (move down one cell)
-        4 = hard drop (drop to bottom instantly)
+        3 = hard drop (drop to bottom instantly)
     """
 
     # Game constants
@@ -79,6 +78,11 @@ class TetrisEnv:
             [(0, 0), (0, 1), (1, 1), (2, 1)]
         ]
     }
+
+    NUMBER_OF_SHAPES = len(SHAPES)
+    NUMBER_OF_ROTATIONS = max(len(rotations) for rotations in SHAPES.values())
+    STATE_SIZE = BOARD_WIDTH * BOARD_HEIGHT + NUMBER_OF_SHAPES +  NUMBER_OF_ROTATIONS
+    NUMBER_OF_ACTIONS = 4  # Left, Right, Rotate, Hard Drop
 
     def __init__(self, render_mode: bool = True):
         """
@@ -291,7 +295,7 @@ class TetrisEnv:
         Execute one action in the environment.
 
         Args:
-            action: Integer action (0=left, 1=right, 2=rotate, 3=soft drop, 4=hard drop)
+            action: Integer action (0=left, 1=right, 2=rotate, 3=hard drop)
 
         Returns:
             Tuple of (next_state, reward, done, info)
@@ -309,13 +313,13 @@ class TetrisEnv:
             self._move_right()
         elif action == 2:  # Rotate
             self._rotate()
-        elif action == 3:  # Soft drop
-            if not self._soft_drop():
-                piece_locked = True
-        elif action == 4:  # Hard drop
+        elif action == 3:  # Hard drop (now action index 3)
             rows_dropped = self._hard_drop()
             reward += rows_dropped * 2  # Bonus for hard drop
             piece_locked = True
+        else:
+            # Invalid action: ignore (could also raise)
+            pass
 
         # Handle piece locking
         if piece_locked:
@@ -340,26 +344,7 @@ class TetrisEnv:
                 reward -= 500
                 self.game_over = True
 
-        return self.get_state(), reward, self.game_over, self._get_info()
-
-    def get_state(self) -> np.ndarray:
-        """
-        Get the current board state.
-
-        Returns:
-            Board as a numpy array (BOARD_HEIGHT x BOARD_WIDTH)
-        """
-        # Create a copy of the board with the current piece overlaid
-        state = self.board.copy()
-
-        if not self.game_over and self.current_piece is not None:
-            for dy, dx in self.current_piece:
-                row = self.current_pos[0] + dy
-                col = self.current_pos[1] + dx
-                if 0 <= row < self.BOARD_HEIGHT and 0 <= col < self.BOARD_WIDTH:
-                    state[row, col] = self.current_color_idx + 1
-
-        return state
+        return encode_state(self), reward, self.game_over, self._get_info()
 
     def get_features(self) -> Dict[str, float]:
         """
@@ -436,6 +421,11 @@ class TetrisEnv:
             'total_pieces': self.total_pieces,
             'game_over': self.game_over
         }
+
+    def get_state(self) -> np.ndarray:
+        """Return the encoded state for the environment."""
+        # encode_state is defined later in this module
+        return encode_state(self)
 
     def render(self):
         """Render the game using Pygame."""
@@ -520,7 +510,7 @@ if __name__ == "__main__":
     env = TetrisEnv(render_mode=True)
 
     print("Tetris Environment Test")
-    print("Actions: 0=Left, 1=Right, 2=Rotate, 3=Soft Drop, 4=Hard Drop")
+    print("Actions: 0=Left, 1=Right, 2=Rotate, 3=Hard Drop")
     print("\nRunning random agent...")
 
     state = env.reset()
@@ -534,8 +524,8 @@ if __name__ == "__main__":
                 done = True
                 break
 
-        # Random action
-        action = random.choice([0, 1, 2, 3, 4])
+        # Random action (soft drop removed)
+        action = random.choice([0, 1, 2, 3])
 
         # Take step
         next_state, reward, done, info = env.step(action)
@@ -556,3 +546,22 @@ if __name__ == "__main__":
     # Keep window open briefly
     pygame.time.wait(2000)
     env.close()
+
+
+def encode_shape(env: TetrisEnv) -> np.ndarray:
+    shape = np.zeros(env.NUMBER_OF_SHAPES, dtype=int)
+    if env.current_shape_name is not None:
+        shape[env.current_color_idx] = 1
+    return shape
+
+def encode_rotation(env: TetrisEnv) -> np.ndarray:
+    rotation = np.zeros(env.NUMBER_OF_ROTATIONS, dtype=int)
+    if env.current_shape_name is not None:
+        rotation[env.current_rotation] = 1
+    return rotation
+
+def encode_state(env: TetrisEnv) -> np.ndarray:
+    board_flat = env.board.flatten()
+    shape_enc = encode_shape(env)
+    rotation_enc = encode_rotation(env)
+    return np.concatenate([board_flat, shape_enc, rotation_enc])
