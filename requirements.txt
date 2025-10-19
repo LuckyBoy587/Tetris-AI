@@ -1,0 +1,8 @@
+pygame>=2.5.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+
+# Optional GPU acceleration (for P100 or other CUDA GPUs)
+# Install with: pip install cupy-cuda12x (for CUDA 12.x)
+# Or check https://docs.cupy.dev/en/stable/install.html for your CUDA version
+# cupy-cuda12x>=12.0.0

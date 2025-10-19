@@ -1,3 +1,23 @@
 .idea
 .venv
 __pycache__/
+
+# Trained models and outputs
+*.pkl
+*_training_plot.png
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

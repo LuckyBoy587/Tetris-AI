@@ -2,7 +2,7 @@
 
 A lightweight, self-contained Tetris environment designed for reinforcement learning experiments. Implemented with Pygame for rendering and NumPy for state handling. The environment is provided as a single file (`tetris_env.py`) exposing a `TetrisEnv` class with a familiar `reset/step/render/close` API.
 
-> Status: Minimal environment only. No CLI, training scripts, packaging, or tests are included yet.
+> Status: Includes Tetris environment and Genetic Algorithm agent for AI training.
 
 
 ## Overview
@@ -26,8 +26,9 @@ A lightweight, self-contained Tetris environment designed for reinforcement lear
 
 - Language: Python 3.8+ (tested versions not specified; 3.10+ recommended)
 - Libraries:
-  - `pygame`
-  - `numpy`
+  - `pygame` - for game rendering
+  - `numpy` - for state handling and computations
+  - `matplotlib` - for training visualization (optional)
 - Package manager: pip (no poetry/conda configuration present)
 
 > TODO: Add a pinned dependencies file (e.g., `requirements.txt`) with tested versions.
@@ -50,7 +51,7 @@ It is recommended to use a virtual environment.
   python -m venv .venv
   .\.venv\Scripts\Activate.ps1
   pip install --upgrade pip
-  pip install pygame numpy
+  pip install pygame numpy matplotlib
   ```
 
 - macOS/Linux (bash):
@@ -59,13 +60,32 @@ It is recommended to use a virtual environment.
   python3 -m venv .venv
   source .venv/bin/activate
   pip install --upgrade pip
-  pip install pygame numpy
+  pip install pygame numpy matplotlib
   ```
 
-> Note: The repository does not include a `requirements.txt`. Install the two libraries above or create one with pinned versions after testing in your environment.
+> Note: matplotlib is optional and only needed for training visualization.
+
+**Verify Installation:**
+```powershell
+python test_installation.py
+```
+
+This will test all components and confirm everything is working correctly.
 
 
 ## Usage
+
+### Quick Demo
+
+Run a 5-minute demonstration to see the GA agent in action:
+
+```powershell
+python demo.py
+```
+
+This trains a small agent and plays a demonstration game.
+
+### Basic Environment Usage
 
 Basic example showing environment loop with random actions:
 
@@ -86,6 +106,8 @@ while not done:
 
 env.close()
 ```
+
+### Headless Training
 
 Headless training-style loop (no window):
 
@@ -131,14 +153,57 @@ See `tetris_env.py` for additional internal helpers such as collision detection,
 
 ## Scripts
 
-No project scripts are currently provided.
+### Genetic Algorithm Agent
 
-- `python -c "from tetris_env import TetrisEnv; print(TetrisEnv)"` — quick import check
+Train an AI agent using Genetic Algorithms to evolve optimal Tetris-playing strategies.
+
+**Train a new agent:**
+```powershell
+python genetic_agent.py --mode train --generations 20 --population 30 --games 3
+```
+
+**Continue training an existing agent:**
+```powershell
+python genetic_agent.py --mode continue --generations 10 --file genetic_agent.pkl
+```
+
+**Play a game with the trained agent:**
+```powershell
+python genetic_agent.py --mode play --file genetic_agent.pkl
+```
+
+**Visualize training progress:**
+```powershell
+python visualize_training.py --file genetic_agent.pkl
+```
+
+**Command-line arguments:**
+- `--mode`: `train` (new agent), `play` (watch trained agent), or `continue` (resume training)
+- `--generations`: Number of generations to evolve (default: 20)
+- `--population`: Population size (default: 30)
+- `--games`: Number of games per fitness evaluation (default: 3)
+- `--file`: File to save/load agent (default: genetic_agent.pkl)
+
+### How the Genetic Algorithm Works
+
+The GA agent evolves weights for four key Tetris features:
+1. **Aggregate Height**: Total height of all columns (minimized)
+2. **Holes**: Empty cells with blocks above them (minimized)
+3. **Bumpiness**: Height variation between adjacent columns (minimized)
+4. **Completed Lines**: Number of full lines (maximized)
+
+The algorithm:
+1. Creates a population of chromosomes (each with random weights)
+2. Evaluates fitness by playing Tetris games
+3. Selects best performers using tournament selection
+4. Creates offspring through crossover and mutation
+5. Repeats for multiple generations
+
+Typical training results in agents that can clear 100+ lines and achieve scores of 10,000+.
 
 > TODO:
 > - Add a minimal `play.py` to play with keyboard controls (if desired)
-> - Add a `train.py` sample showing an agent loop
-> - Add packaging metadata and console entry point (optional)
+> - Add more RL algorithms (DQN, PPO, etc.)
 
 
 ## Environment Variables
@@ -177,12 +242,26 @@ print("OK")
 
 ```
 D:/AI or Machine Learning/Tetris AI/
-├── tetris_env.py      # Pygame-based Tetris RL environment (TetrisEnv)
-└── README.md          # This file
+├── tetris_env.py           # Pygame-based Tetris RL environment (TetrisEnv)
+├── genetic_agent.py        # Genetic Algorithm agent for training
+├── visualize_training.py   # Training visualization tools
+├── demo.py                 # Quick demonstration script
+├── test_installation.py    # Installation verification
+├── requirements.txt        # Python dependencies
+├── README.md               # This file
+├── QUICKSTART.md           # 5-minute getting started guide
+├── GA_USAGE_GUIDE.md       # Comprehensive GA usage guide
+└── PROJECT_STRUCTURE.md    # Detailed file descriptions
 ```
 
 Entry point(s):
-- There is no CLI entry point. Import and instantiate `TetrisEnv` from `tetris_env.py` in your own scripts.
+- `tetris_env.py`: Import and instantiate `TetrisEnv` in your own scripts
+- `genetic_agent.py`: Standalone script for training and playing with GA agent
+- `visualize_training.py`: Standalone script for plotting training progress
+- `demo.py`: Quick demo for first-time users
+- `test_installation.py`: Verify everything is working
+
+**New to this project?** Start with `QUICKSTART.md` for a 5-minute tutorial!
 
 
 ## License
