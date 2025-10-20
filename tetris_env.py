@@ -333,22 +333,23 @@ class TetrisEnv:
             # Clear lines
             lines_cleared = self._clear_lines()
 
-            # Reward for clearing lines
-            line_rewards = {0: 0, 1: 100, 2: 300, 3: 500, 4: 800}
-            reward += line_rewards.get(lines_cleared, 0)
+            # Smaller, scaled rewards for clearing lines (keep relative values)
+            # Use modest values so cumulative reward doesn't explode
+            line_rewards = {0: 0.0, 1: 1.0, 2: 2.5, 3: 4.0, 4: 6.0}
+            reward += float(line_rewards.get(lines_cleared, 1.0))
 
-            # Penalty for increasing height
-            height_penalty = -self._calculate_aggregate_height() * 0.5
-            reward += height_penalty
+            # Penalty for increasing height (scaled down)
+            height_penalty = -self._calculate_aggregate_height() * 0.02
+            reward += float(height_penalty)
 
-            # Penalty for holes
-            holes_penalty = -self._calculate_holes() * 10
-            reward += holes_penalty
+            # Penalty for holes (scaled down)
+            holes_penalty = -self._calculate_holes() * 0.5
+            reward += float(holes_penalty)
 
             # Spawn next piece
             if not self._spawn_piece():
-                # Game over penalty
-                reward -= 500
+                # Smaller game over penalty
+                reward -= 5.0
                 self.game_over = True
 
         return encode_state(self), reward, self.game_over, self._get_info()
