@@ -4,6 +4,7 @@ __pycache__/
 
 # Trained models and outputs
 *.pkl
+*.pth
 *_training_plot.png
 
 # Python cache

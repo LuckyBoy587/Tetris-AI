@@ -321,6 +321,13 @@ class TetrisEnv:
             # Invalid action: ignore (could also raise)
             pass
 
+        # For all non-hard-drop actions, advance the piece by one row (soft drop).
+        # If the soft drop cannot move the piece, it becomes locked and will be processed below.
+        if action != 3 and not piece_locked:
+            moved = self._soft_drop()
+            if not moved:
+                piece_locked = True
+
         # Handle piece locking
         if piece_locked:
             # Clear lines
