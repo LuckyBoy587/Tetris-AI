@@ -339,7 +339,7 @@ class TetrisEnv:
             reward += float(line_rewards.get(lines_cleared, 1.0))
 
             # Penalty for increasing height (scaled down)
-            height_penalty = -self._calculate_aggregate_height() * 0.02
+            height_penalty = -self._get_max_height() * 0.02
             reward += float(height_penalty)
 
             # Penalty for holes (scaled down)
@@ -353,6 +353,18 @@ class TetrisEnv:
                 self.game_over = True
 
         return encode_state(self), reward, self.game_over, self._get_info()
+    
+    def _get_max_height(self) -> float:
+        """Calculate maximum column height."""
+        heights = []
+        for col in range(self.BOARD_WIDTH):
+            height = 0
+            for row in range(self.BOARD_HEIGHT):
+                if self.board[row, col] != 0:
+                    height = self.BOARD_HEIGHT - row
+                    break
+            heights.append(height)
+        return max(heights)
 
     def get_features(self) -> Dict[str, float]:
         """
@@ -392,7 +404,7 @@ class TetrisEnv:
             for row in range(self.BOARD_HEIGHT):
                 if self.board[row, col] != 0:
                     block_found = True
-                elif block_found and self.board[row, col] == 0:
+                elif block_found:
                     holes += 1
         return holes
 
@@ -485,7 +497,7 @@ class TetrisEnv:
             f"Pieces: {self.total_pieces}",
             "",
             "Features:",
-            f"Height: {self._calculate_aggregate_height():.0f}",
+            f"Height: {self._get_max_height():.0f}",
             f"Holes: {self._calculate_holes()}",
             f"Bumpy: {self._calculate_bumpiness():.0f}",
         ]
