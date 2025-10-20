@@ -6,7 +6,7 @@ A Pygame-based Tetris implementation structured as an RL environment.
 import pygame
 import numpy as np
 import random
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, List
 
 
 class TetrisEnv:
@@ -42,42 +42,158 @@ class TetrisEnv:
         (255, 165, 0)     # L - Orange
     ]
 
+    @staticmethod
+    def _build_shapes() -> Dict[str, List[List[Tuple[int, int]]]]:
+        """Construct normalized rotation states for each tetromino."""
+        raw_shapes = {
+            'I': [
+                (
+                    "....",
+                    "####",
+                    "....",
+                    "....",
+                ),
+                (
+                    ".#..",
+                    ".#..",
+                    ".#..",
+                    ".#..",
+                ),
+            ],
+            'O': [
+                (
+                    ".##.",
+                    ".##.",
+                    "....",
+                    "....",
+                ),
+            ],
+            'T': [
+                (
+                    ".#..",
+                    "###.",
+                    "....",
+                    "....",
+                ),
+                (
+                    ".#..",
+                    ".##.",
+                    ".#..",
+                    "....",
+                ),
+                (
+                    "....",
+                    "###.",
+                    ".#..",
+                    "....",
+                ),
+                (
+                    ".#..",
+                    "##..",
+                    ".#..",
+                    "....",
+                ),
+            ],
+            'S': [
+                (
+                    "..##",
+                    ".##.",
+                    "....",
+                    "....",
+                ),
+                (
+                    ".#..",
+                    ".##.",
+                    "..#.",
+                    "....",
+                ),
+            ],
+            'Z': [
+                (
+                    ".##.",
+                    "..##",
+                    "....",
+                    "....",
+                ),
+                (
+                    "..#.",
+                    ".##.",
+                    ".#..",
+                    "....",
+                ),
+            ],
+            'J': [
+                (
+                    "#...",
+                    "###.",
+                    "....",
+                    "....",
+                ),
+                (
+                    ".##.",
+                    ".#..",
+                    ".#..",
+                    "....",
+                ),
+                (
+                    "....",
+                    "###.",
+                    "..#.",
+                    "....",
+                ),
+                (
+                    ".#..",
+                    ".#..",
+                    "##..",
+                    "....",
+                ),
+            ],
+            'L': [
+                (
+                    "...#",
+                    ".###",
+                    "....",
+                    "....",
+                ),
+                (
+                    ".#..",
+                    ".#..",
+                    ".##.",
+                    "....",
+                ),
+                (
+                    "....",
+                    "###.",
+                    "#...",
+                    "....",
+                ),
+                (
+                    "##..",
+                    ".#..",
+                    ".#..",
+                    "....",
+                ),
+            ],
+        }
+
+        shapes: Dict[str, List[List[Tuple[int, int]]]] = {}
+        for name, rotations in raw_shapes.items():
+            normalized: List[List[Tuple[int, int]]] = []
+            for rotation in rotations:
+                coords: List[Tuple[int, int]] = []
+                for row_idx, row in enumerate(rotation):
+                    for col_idx, cell in enumerate(row):
+                        if cell == '#':
+                            coords.append((row_idx, col_idx))
+
+                min_row = min(r for r, _ in coords)
+                min_col = min(c for _, c in coords)
+                normalized.append([(r - min_row, c - min_col) for r, c in coords])
+            shapes[name] = normalized
+        return shapes
+
     # Tetromino shapes (represented as rotation states)
-    SHAPES = {
-        'I': [
-            [(0, 0), (0, 1), (0, 2), (0, 3)],
-            [(0, 0), (1, 0), (2, 0), (3, 0)]
-        ],
-        'O': [
-            [(0, 0), (0, 1), (1, 0), (1, 1)]
-        ],
-        'T': [
-            [(0, 1), (1, 0), (1, 1), (1, 2)],
-            [(0, 1), (1, 1), (1, 2), (2, 1)],
-            [(1, 0), (1, 1), (1, 2), (2, 1)],
-            [(0, 1), (1, 0), (1, 1), (2, 1)]
-        ],
-        'S': [
-            [(0, 1), (0, 2), (1, 0), (1, 1)],
-            [(0, 1), (1, 1), (1, 2), (2, 2)]
-        ],
-        'Z': [
-            [(0, 0), (0, 1), (1, 1), (1, 2)],
-            [(0, 2), (1, 1), (1, 2), (2, 1)]
-        ],
-        'J': [
-            [(0, 0), (1, 0), (1, 1), (1, 2)],
-            [(0, 1), (0, 2), (1, 1), (2, 1)],
-            [(1, 0), (1, 1), (1, 2), (2, 2)],
-            [(0, 1), (1, 1), (2, 0), (2, 1)]
-        ],
-        'L': [
-            [(0, 2), (1, 0), (1, 1), (1, 2)],
-            [(0, 1), (1, 1), (2, 1), (2, 2)],
-            [(1, 0), (1, 1), (1, 2), (2, 0)],
-            [(0, 0), (0, 1), (1, 1), (2, 1)]
-        ]
-    }
+    SHAPES = _build_shapes()
 
     NUMBER_OF_SHAPES = len(SHAPES)
     NUMBER_OF_ROTATIONS = max(len(rotations) for rotations in SHAPES.values())
@@ -228,6 +344,8 @@ class TetrisEnv:
 
     def _move_left(self) -> bool:
         """Move piece left. Returns True if successful."""
+        if self.current_piece is None:
+            return False
         new_pos = [self.current_pos[0], self.current_pos[1] - 1]
         if not self._check_collision(self.current_piece, new_pos):
             self.current_pos = new_pos
@@ -236,6 +354,8 @@ class TetrisEnv:
 
     def _move_right(self) -> bool:
         """Move piece right. Returns True if successful."""
+        if self.current_piece is None:
+            return False
         new_pos = [self.current_pos[0], self.current_pos[1] + 1]
         if not self._check_collision(self.current_piece, new_pos):
             self.current_pos = new_pos
@@ -244,14 +364,21 @@ class TetrisEnv:
 
     def _rotate(self) -> bool:
         """Rotate piece clockwise. Returns True if successful."""
+        if self.current_piece is None or self.current_shape_name is None:
+            return False
         shapes = self.SHAPES[self.current_shape_name]
         new_rotation = (self.current_rotation + 1) % len(shapes)
         new_piece = shapes[new_rotation]
 
-        if not self._check_collision(new_piece, self.current_pos):
-            self.current_rotation = new_rotation
-            self.current_piece = new_piece
-            return True
+        # Try simple wall kicks to allow rotation near boundaries
+        kick_offsets = [(0, 0), (0, -1), (0, 1), (0, -2), (0, 2), (-1, 0)]
+        for dy, dx in kick_offsets:
+            new_pos = [self.current_pos[0] + dy, self.current_pos[1] + dx]
+            if not self._check_collision(new_piece, new_pos):
+                self.current_rotation = new_rotation
+                self.current_piece = new_piece
+                self.current_pos = new_pos
+                return True
         return False
 
     def _soft_drop(self) -> bool:
@@ -261,6 +388,8 @@ class TetrisEnv:
         Returns:
             True if moved successfully, False if locked
         """
+        if self.current_piece is None:
+            return False
         new_pos = [self.current_pos[0] + 1, self.current_pos[1]]
         if not self._check_collision(self.current_piece, new_pos):
             self.current_pos = new_pos
@@ -277,6 +406,8 @@ class TetrisEnv:
         Returns:
             Number of rows dropped
         """
+        if self.current_piece is None:
+            return 0
         rows_dropped = 0
         while True:
             new_pos = [self.current_pos[0] + 1, self.current_pos[1]]
@@ -339,11 +470,11 @@ class TetrisEnv:
             reward += float(line_rewards.get(lines_cleared, 1.0))
 
             # Penalty for increasing height (scaled down)
-            height_penalty = -self._get_max_height() * 0.02
+            height_penalty = -self._get_max_height()
             reward += float(height_penalty)
 
-            # Penalty for holes (scaled down)
-            holes_penalty = -self._calculate_holes() * 0.5
+            # Penalty for holes
+            holes_penalty = -self._calculate_holes()
             reward += float(holes_penalty)
 
             # Spawn next piece
@@ -435,6 +566,8 @@ class TetrisEnv:
 
     def _get_info(self) -> Dict:
         """Get additional game information."""
+        if not self.render_mode:
+            return {}
         return {
             'score': self.score,
             'lines_cleared': self.lines_cleared,
@@ -516,7 +649,8 @@ class TetrisEnv:
             self.screen.blit(game_over_surface, text_rect)
 
         pygame.display.flip()
-        self.clock.tick(self.RENDER_TICK_SPEED)
+        if self.clock is not None:
+            self.clock.tick(self.RENDER_TICK_SPEED)
 
     def close(self):
         """Clean up Pygame resources."""
